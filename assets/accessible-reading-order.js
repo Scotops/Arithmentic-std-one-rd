@@ -59,12 +59,11 @@
     'pg055_n0056', 'pg055_n0061', 'pg055_n0065', 'pg055_n0070', 'pg055_n0074',
     'pg055_n0079', 'pg055_n0083'
   ]);
-  // These two examples are narrated by their heading clip as one complete,
-  // visual-order sentence. Their component image, operation labels and
-  // printed number sentence must not be played a second time.
+  // These source pages include invisible duplicate operation labels. The
+  // picture narration already says "add" and "equals", so omit only those
+  // hidden duplicates while retaining the heading, picture and number fact.
   const guidedExampleComponentIds = new Set([
-    'pg053_im013_seg001_v1_crop_v1_crop1', 'pg053_n0106', 'pg053_n0107', 'pg053_n0108',
-    'pg053_im013_seg002_v1_crop_v1_crop1', 'pg053_n0112', 'pg053_n0113', 'pg053_n0114'
+    'pg053_n0106', 'pg053_n0107', 'pg053_n0112', 'pg053_n0113'
   ]);
 
   const isVisibleForReading = (element) => {

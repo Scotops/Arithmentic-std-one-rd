@@ -27,8 +27,8 @@ PHRASES = {
     "pg047_n0033": "Five minus two equals dash.",
     "pg047_n0035": "Four minus three equals dash.",
     "pg047_n0037": "Six minus zero equals dash.",
-    "pg053_n0104": "Example one. One hand showing five fingers, add one hand showing five fingers, equals two hands showing ten fingers. Five plus five equals ten.",
-    "pg053_n0110": "Example two. Four pencils, add six pencils, equals ten pencils. Four plus six equals ten.",
+    "pg053_im013_seg001_v1_crop_v1_crop1": "One hand showing five fingers, add one hand showing five fingers, equals two hands showing ten fingers.",
+    "pg053_im013_seg002_v1_crop_v1_crop1": "Four pencils, add six pencils, equals ten pencils.",
 }
 
 
