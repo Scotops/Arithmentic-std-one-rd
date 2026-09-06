@@ -271,7 +271,18 @@
     };
   };
 
-  keepOnlyTheVisibleCopy();
-  rebuildNarrationQueue();
-  patchLocalizedFetches();
+  // Image-caption-narration registers its DOM-ready handler before this
+  // script.  Build the queue after that handler has replaced visual images
+  // with their accessible captions, otherwise the queue can retain an old
+  // generic image label instead of the complete child-friendly description.
+  const initializeReadingQueue = () => {
+    keepOnlyTheVisibleCopy();
+    rebuildNarrationQueue();
+    patchLocalizedFetches();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeReadingQueue, { once: true });
+  } else {
+    initializeReadingQueue();
+  }
 })();
