@@ -93,6 +93,37 @@
     return match ? Number(match[1]) : null;
   };
 
+  /*
+   * Some source pages print a red question marker (for example, "1.") as a
+   * decorative span without a data-id.  The reader can only narrate elements
+   * carrying data-id, which used to make it jump straight to the equation.
+   * Give those standalone markers an audio-only identity before extraction.
+   * The visual page is unchanged; the shared clips say "Question number one",
+   * "Question number two", and so on.
+   */
+  const registerStandaloneQuestionLabels = (root) => {
+    if (!root) return;
+    const occurrences = new Map();
+    root.querySelectorAll('span, p, div, td, th, li').forEach((element) => {
+      if (element.hasAttribute('data-id') || element.children.length) return;
+      const number = questionNumber(element);
+      if (!number || number > 28) return;
+
+      const parent = element.parentElement;
+      const hasQuestionContent = Array.from(parent?.children || []).some((sibling) =>
+        sibling !== element && (sibling.hasAttribute('data-id') || sibling.querySelector?.('[data-id]'))
+      );
+      if (!hasQuestionContent) return;
+
+      const occurrence = (occurrences.get(number) || 0) + 1;
+      occurrences.set(number, occurrence);
+      const id = `adt_question_label_${number}_${occurrence}`;
+      element.setAttribute('data-id', id);
+      textFixes[id] = `${number}.`;
+      questionLabelAudioFixes[id] = `question-number-${number}.mp3?v=matrix-question-labels-2`;
+    });
+  };
+
   const orderedGridItems = (grid) => {
     // Some print layouts use one direct grid child per row.  Others wrap all
     // four cells of the row in a `contents` element.  Work from the actual
@@ -276,10 +307,15 @@
   // with their accessible captions, otherwise the queue can retain an old
   // generic image label instead of the complete child-friendly description.
   const initializeReadingQueue = () => {
+    registerStandaloneQuestionLabels(document.getElementById('content'));
     keepOnlyTheVisibleCopy();
     rebuildNarrationQueue();
-    patchLocalizedFetches();
   };
+  // This script is intentionally loaded before the reader runtime. Register
+  // labels and intercept the localized maps immediately, so the runtime sees
+  // their text and "Question number …" audio on its first load.
+  registerStandaloneQuestionLabels(document.getElementById('content'));
+  patchLocalizedFetches();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeReadingQueue, { once: true });
   } else {
