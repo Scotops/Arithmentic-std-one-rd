@@ -11,8 +11,7 @@
 
   const textFixes = {
     pg043_n0035: 'dash',
-    pg043_n0060: 'dash',
-    adt_end_of_page: 'End of page.'
+    pg043_n0060: 'dash'
   };
 
   // Correct malformed subtraction glyphs in the localized source before it
@@ -232,10 +231,6 @@
     // Capture IDs before clearing the visual elements.  The visible page
     // becomes presentation-only; the hidden targets carry the audio IDs.
     const targets = unique.map(makeNarrationTarget);
-    const endOfPageTarget = document.createElement('span');
-    endOfPageTarget.setAttribute('data-id', 'adt_end_of_page');
-    endOfPageTarget.textContent = 'End of page.';
-    targets.push(endOfPageTarget);
     sourceItems.forEach((element) => element.removeAttribute('data-id'));
     const queue = document.createElement('div');
     queue.className = 'adt-reading-queue';
@@ -243,10 +238,6 @@
     queue.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
     targets.forEach((target) => queue.appendChild(target));
     root.appendChild(queue);
-    const endAnnouncement = document.createElement('p');
-    endAnnouncement.className = 'sr-only';
-    endAnnouncement.textContent = 'End of page.';
-    root.appendChild(endAnnouncement);
     window.ADT_TTS_DEBUG = Object.freeze({
       queue: () => debugItems.map((item) => ({ ...item })),
       matrix: (selector) => pipeline?.summarizeMatrix(root.querySelector(selector)) || []
@@ -270,9 +261,7 @@
         matrixDescriptionIds.forEach((id) => { descriptionAudioFixes[id] = `${id}.matrix-description-20260902.mp3?v=matrix-descriptions-1`; });
         const mathAudioFixes = {};
         matrixMathIds.forEach((id) => { mathAudioFixes[id] = `${id}.matrix-math-20260902.mp3?v=matrix-math-1`; });
-        Object.assign(data, audioFixes, questionLabelAudioFixes, descriptionAudioFixes, mathAudioFixes, {
-          adt_end_of_page: 'end-of-page.mp3?v=matrix-end-marker-1'
-        });
+        Object.assign(data, audioFixes, questionLabelAudioFixes, descriptionAudioFixes, mathAudioFixes);
       }
       return new Response(JSON.stringify(data), {
         status: response.status,
