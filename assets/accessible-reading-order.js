@@ -11,8 +11,15 @@
 
   const textFixes = {
     pg043_n0035: 'dash',
-    pg043_n0060: 'dash'
+    pg043_n0060: 'dash',
+    adt_end_of_page: 'End of page.'
   };
+
+  // Correct malformed subtraction glyphs in the localized source before it
+  // is placed in the page.  This repair applies only to a replacement
+  // character between numbers, so it cannot alter a word or a proper name.
+  const sanitizeLocalizedMath = (value) => String(value || '')
+    .replace(/(?<=\d)\s*�\s*(?=\d)/g, ' - ');
 
   const pipeline = window.ADT_TTS_PIPELINE;
 
@@ -24,6 +31,35 @@
     pg100_n0079: 'pg100_n0079.revised.wav?v=audio-audit-20260824',
     pg100_n0083: 'pg100_n0083.revised.wav?v=audio-audit-20260824'
   };
+  const questionLabelAudioFixes = {};
+  const matrixDescriptionIds = new Set([
+    'pg026_im010_seg001_v1_crop_v1', 'pg026_im010_seg002_v1_crop_v1',
+    'pg026_im010_seg003_v1_crop_v1', 'pg026_im010_seg004_v1_crop_v1',
+    'pg026_im010_seg005_v1', 'pg026_im010_seg006_v1_crop_v1',
+    'pg026_im010_seg007_v1_crop_v1', 'pg026_im010_seg008_v1_crop_v1',
+    'pg079_im016_seg001_v1_crop1', 'pg079_im016_seg002_v1_crop1',
+    'pg085_im012_seg001_v1_crop_v1', 'pg085_im012_seg002_v1_crop_v1',
+    'pg085_im012_seg003_v1_crop_v1', 'pg085_im012_seg004_v1_crop_v1',
+    'pg085_im012_seg005_v1_crop_v1', 'pg085_im012_seg006_v1_crop_v1',
+    'pg126_im008_seg001_v1_crop1', 'pg126_im008_seg002_v1_crop1',
+    'pg126_im008_seg003_v1_crop1', 'pg126_im008_seg004_v1_crop1',
+    'pg126_im008_seg005_v1_crop1', 'pg126_im008_seg006_v1_crop1',
+    'pg126_im008_seg007_v1_crop_v1_crop1', 'pg126_im008_seg008_v1_crop1',
+    'pg129_im013', 'pg129_im014', 'pg129_im018_seg003_v1_crop_v1',
+    'pg129_im003', 'pg129_im018_seg005_v1_crop1',
+    'pg129_im018_seg006_v1_crop_v1_crop1', 'pg129_im018_seg007_v1_crop_v1_crop1',
+    'pg129_im018_seg008_v1_crop_v1_crop1', 'pg129_im018_seg009_v1_crop1',
+    'pg129_im018_seg010_v1_crop_v1_crop1'
+  ]);
+  const matrixMathIds = new Set([
+    'pg002_n0005', 'pg049_n0009', 'pg049_n0019', 'pg049_n0029', 'pg049_n0039',
+    'pg049_n0049', 'pg049_n0012', 'pg049_n0022', 'pg049_n0032', 'pg049_n0042',
+    'pg049_n0052', 'pg049_n0015', 'pg049_n0025', 'pg049_n0035', 'pg049_n0045',
+    'pg049_n0055', 'pg055_n0016', 'pg055_n0020', 'pg055_n0025', 'pg055_n0029',
+    'pg055_n0034', 'pg055_n0038', 'pg055_n0043', 'pg055_n0047', 'pg055_n0052',
+    'pg055_n0056', 'pg055_n0061', 'pg055_n0065', 'pg055_n0070', 'pg055_n0074',
+    'pg055_n0079', 'pg055_n0083'
+  ]);
 
   const isVisibleForReading = (element) => {
     for (let node = element; node && node !== document.documentElement; node = node.parentElement) {
@@ -105,6 +141,30 @@
     return target;
   };
 
+  // Printed revision tests often use two visual columns. Their source markup
+  // can place question 2 after questions 10–20. Treat a page-wide, complete
+  // sequence as one question list before considering nested layout grids, so
+  // every question and its content stays together in numerical order.
+  const pageWideQuestionOrder = (items) => {
+    const markers = items
+      .map((element, index) => ({ element, index, number: questionNumber(element) }))
+      .filter((item) => item.number !== null);
+    const numbers = markers.map((item) => item.number);
+    const complete = markers.length >= 3
+      && new Set(numbers).size === markers.length
+      && numbers.every((number) => number >= 1 && number <= markers.length)
+      && numbers.includes(1);
+    if (!complete || numbers.every((number, index) => number === index + 1)) return null;
+    const before = items.slice(0, markers[0].index);
+    const questions = markers.map((marker, index) => ({
+      ...marker,
+      items: items.slice(marker.index, markers[index + 1]?.index ?? items.length)
+    }));
+    return [...before, ...questions
+      .sort((left, right) => left.number - right.number)
+      .flatMap((question) => question.items)];
+  };
+
   const rebuildNarrationQueue = () => {
     const root = document.getElementById('content');
     if (!root) return;
@@ -114,6 +174,11 @@
     const replacements = new Map();
     const ordered = [];
 
+    const pageWide = pageWideQuestionOrder(sourceItems);
+    if (pageWide) {
+      ordered.push(...pageWide);
+    }
+
     // Replace each out-of-order numbered grid with the same children, sorted
     // by its printed item number.  All remaining page content stays in DOM
     // order, which is already its intended reading order.
@@ -121,7 +186,7 @@
     // table or an unstyled activity section. Apply the same question-unit
     // ordering to each of those structures. A container is changed only when
     // it contains one complete, unique out-of-order question sequence.
-    root.querySelectorAll('table, .grid, section[data-section-type]').forEach((grid) => {
+    if (!pageWide) root.querySelectorAll('table, .grid, section[data-section-type]').forEach((grid) => {
       const replacement = orderedGridItems(grid);
       if (!replacement) return;
       const originalItems = Array.from(grid.querySelectorAll('[data-id]'));
@@ -130,7 +195,7 @@
       replacements.set(originalItems[0], replacement);
     });
 
-    sourceItems.forEach((element) => {
+    if (!pageWide) sourceItems.forEach((element) => {
       const replacement = replacements.get(element);
       if (replacement) ordered.push(...replacement);
       else if (!excluded.has(element)) ordered.push(element);
@@ -146,6 +211,15 @@
       }
     });
 
+    // A printed label such as “12.” is a question marker, not part of the
+    // equation.  Send it to a shared clip which clearly says “Question
+    // number twelve.”  The following source clip still reads the equation,
+    // so visual layout and question content remain untouched.
+    unique.forEach((element) => {
+      const label = (element.textContent || '').trim().match(/^(\d{1,2})\.$/);
+      if (label) questionLabelAudioFixes[element.getAttribute('data-id')] = `question-number-${Number(label[1])}.mp3?v=matrix-question-labels-1`;
+    });
+
     if (!unique.length) return;
     // Save the final queue before removing source IDs. The visible page uses
     // its native print layout; these snapshots power safe console validation.
@@ -158,6 +232,10 @@
     // Capture IDs before clearing the visual elements.  The visible page
     // becomes presentation-only; the hidden targets carry the audio IDs.
     const targets = unique.map(makeNarrationTarget);
+    const endOfPageTarget = document.createElement('span');
+    endOfPageTarget.setAttribute('data-id', 'adt_end_of_page');
+    endOfPageTarget.textContent = 'End of page.';
+    targets.push(endOfPageTarget);
     sourceItems.forEach((element) => element.removeAttribute('data-id'));
     const queue = document.createElement('div');
     queue.className = 'adt-reading-queue';
@@ -165,6 +243,10 @@
     queue.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
     targets.forEach((target) => queue.appendChild(target));
     root.appendChild(queue);
+    const endAnnouncement = document.createElement('p');
+    endAnnouncement.className = 'sr-only';
+    endAnnouncement.textContent = 'End of page.';
+    root.appendChild(endAnnouncement);
     window.ADT_TTS_DEBUG = Object.freeze({
       queue: () => debugItems.map((item) => ({ ...item })),
       matrix: (selector) => pipeline?.summarizeMatrix(root.querySelector(selector)) || []
@@ -179,8 +261,19 @@
       if (!/content\/i18n\/en-US\/(texts|audios)\.json(?:[?#]|$)/.test(url)) return response;
 
       const data = await response.json();
-      if (/texts\.json(?:[?#]|$)/.test(url)) Object.assign(data, textFixes);
-      else Object.assign(data, audioFixes);
+      if (/texts\.json(?:[?#]|$)/.test(url)) {
+        Object.keys(data).forEach((id) => { data[id] = sanitizeLocalizedMath(data[id]); });
+        Object.assign(data, textFixes);
+      }
+      else {
+        const descriptionAudioFixes = {};
+        matrixDescriptionIds.forEach((id) => { descriptionAudioFixes[id] = `${id}.matrix-description-20260902.mp3?v=matrix-descriptions-1`; });
+        const mathAudioFixes = {};
+        matrixMathIds.forEach((id) => { mathAudioFixes[id] = `${id}.matrix-math-20260902.mp3?v=matrix-math-1`; });
+        Object.assign(data, audioFixes, questionLabelAudioFixes, descriptionAudioFixes, mathAudioFixes, {
+          adt_end_of_page: 'end-of-page.mp3?v=matrix-end-marker-1'
+        });
+      }
       return new Response(JSON.stringify(data), {
         status: response.status,
         statusText: response.statusText,

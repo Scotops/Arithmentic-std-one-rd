@@ -37,6 +37,11 @@
       .replace(/&nbsp;/gi, ' ')
       .replace(/(?:\[\s*\]|_{2,})/g, ' dash ')
       .replace(/(\d+)\s*\/\s*(\d+)/g, '$1 over $2')
+      // Some source pages contain a replacement character where the printed
+      // subtraction sign was extracted.  Treat it as a mathematical minus
+      // only when it occurs between numeric values; this keeps ordinary text
+      // and names intact while making every subtraction question speakable.
+      .replace(/(?<=\d)\s*�\s*(?=\d)/g, ' minus ')
       .replace(/[−–]/g, ' minus ')
       .replace(/(?<=\d)\s*-\s*(?=\d)/g, ' minus ')
       .replace(/\+\s*=/g, ' plus dash equals ')
@@ -50,12 +55,21 @@
     // by extraction from a repeated cell or image caption.
     text = text.replace(/\b([\p{L}\p{N}]+)(?:\s+\1\b)+/giu, '$1');
     text = text.replace(/\b(dash)(?:\s+dash\b)+/gi, 'dash');
+    text = text.replace(/^(\d{1,3})\.$/, (_match, number) => `question number ${cardinal(number)}`);
     return text.replace(/\s+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
   };
 
   const excluded = (element) => {
     if (!element || element.closest(ANSWER_SELECTOR)) return true;
     if (element.closest('[data-tts-exclude="true"], script, style, template')) return true;
+    // Interactive exercises keep shuffled choices and answer text in hidden
+    // markup. They are needed by the activity, but reading them aloud gives
+    // away answers and makes the illustration order sound incorrect.
+    for (let node = element; node && node !== document.documentElement; node = node.parentElement) {
+      if (node.hidden || node.getAttribute('aria-hidden') === 'true') return true;
+      const style = window.getComputedStyle?.(node);
+      if (style?.display === 'none' || style?.visibility === 'hidden') return true;
+    }
     return element.getAttribute('data-tts-role') === 'answer-key';
   };
 
