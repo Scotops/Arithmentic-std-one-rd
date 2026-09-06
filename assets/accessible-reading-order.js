@@ -59,6 +59,13 @@
     'pg055_n0056', 'pg055_n0061', 'pg055_n0065', 'pg055_n0070', 'pg055_n0074',
     'pg055_n0079', 'pg055_n0083'
   ]);
+  // These two examples are narrated by their heading clip as one complete,
+  // visual-order sentence. Their component image, operation labels and
+  // printed number sentence must not be played a second time.
+  const guidedExampleComponentIds = new Set([
+    'pg053_im013_seg001_v1_crop_v1_crop1', 'pg053_n0106', 'pg053_n0107', 'pg053_n0108',
+    'pg053_im013_seg002_v1_crop_v1_crop1', 'pg053_n0112', 'pg053_n0113', 'pg053_n0114'
+  ]);
 
   const isVisibleForReading = (element) => {
     for (let node = element; node && node !== document.documentElement; node = node.parentElement) {
@@ -76,7 +83,7 @@
       // Screen-reader labels embedded in print tables, hidden answer keys,
       // responsive copies, and duplicate image captions are not independent
       // pieces of book content.
-      if (element.closest('label.sr-only') || !kept.has(element)) element.removeAttribute('data-id');
+      if (element.closest('label.sr-only') || guidedExampleComponentIds.has(element.getAttribute('data-id')) || !kept.has(element)) element.removeAttribute('data-id');
     });
   };
 

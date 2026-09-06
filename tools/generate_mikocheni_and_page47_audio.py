@@ -27,6 +27,8 @@ PHRASES = {
     "pg047_n0033": "Five minus two equals dash.",
     "pg047_n0035": "Four minus three equals dash.",
     "pg047_n0037": "Six minus zero equals dash.",
+    "pg053_n0104": "Example one. One hand showing five fingers, add one hand showing five fingers, equals two hands showing ten fingers. Five plus five equals ten.",
+    "pg053_n0110": "Example two. Four pencils, add six pencils, equals ten pencils. Four plus six equals ten.",
 }
 
 
@@ -38,7 +40,8 @@ async def main(start: int = 0, limit: int | None = None) -> None:
     entries = list(PHRASES.items())
     entries = entries[start:] if limit is None else entries[start:start + limit]
     async def create_clip(text_id: str, phrase: str) -> tuple[str, str, Path]:
-        target = output / f"{text_id}.pronunciation-and-dash-20260906.mp3"
+        suffix = "guided-example-20260906" if text_id.startswith("pg053_") else "pronunciation-and-dash-20260906"
+        target = output / f"{text_id}.{suffix}.mp3"
         await edge_tts.Communicate(phrase, voice="en-US-AriaNeural").save(str(target))
         return text_id, phrase, target
 
