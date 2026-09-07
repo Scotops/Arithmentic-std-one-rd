@@ -47,7 +47,7 @@ def remove_obsolete_scripts(source: str) -> str:
 def add_media_sync(source: str) -> str:
     if re.search(r'src=["\'][^"\']*media-sync\.js', source, re.IGNORECASE):
         return source
-    script = '\n    <script src="./assets/media-sync.js?v=15"></script>\n'
+    script = '\n    <script src="./assets/media-sync.js?v=16"></script>\n'
     return re.sub(r'(?i)</body>', script + '</body>', source, count=1)
 
 
