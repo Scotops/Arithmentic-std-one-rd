@@ -25,7 +25,7 @@ class VisibleTextParser(HTMLParser):
         tagged = parent_tagged or "data-id" in values
         skip = parent_skip or tag in {"head", "title", "script", "style", "template", "noscript", "button"}
         skip = skip or "hidden" in values or values.get("aria-hidden") == "true"
-        skip = skip or "sr-only" in classes or "printed-folio" in classes or "ai-narration-disclosure" in classes
+        skip = skip or "sr-only" in classes or "printed-folio" in classes
         self.stack.append((tag, tagged, skip))
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:

@@ -115,15 +115,6 @@ def remove_disclosure(source: str) -> str:
     )
 
 
-def add_disclosure(source: str) -> str:
-    source = remove_disclosure(source)
-    disclosure = (
-        '\n      <p class="ai-narration-disclosure" role="note">'
-        'Read-aloud narration uses an AI-generated voice.</p>\n'
-    )
-    return re.sub(r"(?i)</main>", disclosure + "    </main>", source, count=1)
-
-
 def add_folio(source: str, physical_page: int) -> str:
     source = re.sub(
         r"\s*<footer\b[^>]*class=[\"'][^\"']*printed-folio[^\"']*[\"'][^>]*>.*?</footer>",
@@ -189,7 +180,7 @@ def main() -> None:
         if physical_page in primary_by_page:
             updated = update_primary_metadata(updated, physical_page)
             updated = add_folio(updated, physical_page)
-        updated = add_disclosure(updated)
+        updated = remove_disclosure(updated)
         if updated != original:
             path.write_text(updated, encoding="utf-8", newline="")
             changed += 1

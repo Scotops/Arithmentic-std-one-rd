@@ -69,8 +69,18 @@ def main() -> None:
         footer_text = re.sub(r'<[^>]+>', ' ', footer.group(1)) if footer else ''
         if " ".join(footer_text.split()) != folio:
             fail(f"Incorrect visible printed folio in {page_file.name}: expected {folio}")
-        if "ai-narration-disclosure" not in source:
-            fail(f"Missing narration disclosure in {page_file.name}")
+        if "ai-narration-disclosure" in source:
+            fail(f"Unwanted narration disclosure remains in {page_file.name}")
+
+    disclosure_text = "Read-aloud narration uses an AI-generated voice."
+    unwanted_disclosures = [
+        page_file.name
+        for page_file in ROOT.glob("*.html")
+        if "ai-narration-disclosure" in page_file.read_text(encoding="utf-8")
+        or disclosure_text in page_file.read_text(encoding="utf-8")
+    ]
+    if unwanted_disclosures:
+        fail(f"Unwanted narration disclosure remains: {unwanted_disclosures[:10]}")
 
     config = json.loads((ROOT / "assets" / "config.json").read_text(encoding="utf-8"))
     features = config["features"]

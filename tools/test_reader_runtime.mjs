@@ -39,6 +39,13 @@ page.on('pageerror', (error) => {
   console.log(`PAGE ERROR ${detail}`);
 });
 
+const blockBulkMedia = async (route) => {
+  const url = route.request().url();
+  if (/\.(?:mp3|wav|mp4)(?:[?#]|$)/i.test(url)) await route.abort();
+  else await route.continue();
+};
+await page.route('**/*', blockBulkMedia);
+
 if (process.argv.includes('--quiz-debug')) {
   const cdp = await context.newCDPSession(page);
   await cdp.send('Runtime.enable');
@@ -125,6 +132,9 @@ await quizOption.click({ force: true });
 assert(await quizOption.isChecked(), 'Quiz pointer selection failed');
 assert(await page.locator('section[data-section-type="activity_quiz"]').count() === 1, 'Quiz activity structure is missing');
 
+await page.unroute('**/*', blockBulkMedia);
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForSelector('video');
 await page.waitForSelector('button[aria-label$="text to speech"]');
 await page.locator('button[aria-label$="text to speech"]').click();
 await page.waitForFunction(() => {
@@ -136,7 +146,13 @@ const syncPlaying = await page.evaluate(() => ({
   videoPaused: window.ADT_MEDIA_SYNC?.video?.()?.paused,
   videoTime: window.ADT_MEDIA_SYNC?.video?.()?.currentTime || 0,
 }));
-await page.evaluate(() => window.ADT_MEDIA_SYNC.audio()?.pause());
+for (let attempt = 0; attempt < 4; attempt += 1) {
+  await page.evaluate(() => window.ADT_MEDIA_SYNC.audio()?.pause());
+  await page.waitForTimeout(250);
+  const settled = await page.evaluate(() =>
+    !window.ADT_MEDIA_SYNC?.active() && Boolean(window.ADT_MEDIA_SYNC?.video?.()?.paused));
+  if (settled) break;
+}
 await page.waitForFunction(() => window.ADT_MEDIA_SYNC?.video?.()?.paused, null, { timeout: 5000 });
 const syncPaused = await page.evaluate(() => ({
   active: window.ADT_MEDIA_SYNC?.active() || false,

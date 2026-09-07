@@ -82,7 +82,7 @@ def main() -> None:
                     class_names = set(classes.group(2).split()) if classes else set()
                     skip = parent_skip or tag in {"script", "style", "template", "noscript", "button"}
                     skip = skip or bool(re.search(r'(?:^|\s)hidden(?:\s|=|$)|\baria-hidden\s*=\s*["\']true', attrs, re.I))
-                    skip = skip or bool(class_names & {"sr-only", "printed-folio", "ai-narration-disclosure"})
+                    skip = skip or bool(class_names & {"sr-only", "printed-folio"})
                     if tag not in VOID and not token.rstrip().endswith("/>"):
                         stack.append((tag, tagged, skip))
                 output.append(token)
