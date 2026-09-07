@@ -128,19 +128,19 @@ assert(await page.locator('section[data-section-type="activity_quiz"]').count() 
 await page.waitForSelector('button[aria-label$="text to speech"]');
 await page.locator('button[aria-label$="text to speech"]').click();
 await page.waitForFunction(() => {
-  const video = document.querySelector('video');
+  const video = window.ADT_MEDIA_SYNC?.video?.();
   return window.ADT_MEDIA_SYNC?.active() && video && !video.paused && video.currentTime > 0;
 }, null, { timeout: 10000 });
 const syncPlaying = await page.evaluate(() => ({
   active: window.ADT_MEDIA_SYNC?.active() || false,
-  videoPaused: document.querySelector('video')?.paused,
-  videoTime: document.querySelector('video')?.currentTime || 0,
+  videoPaused: window.ADT_MEDIA_SYNC?.video?.()?.paused,
+  videoTime: window.ADT_MEDIA_SYNC?.video?.()?.currentTime || 0,
 }));
 await page.evaluate(() => window.ADT_MEDIA_SYNC.audio()?.pause());
-await page.waitForFunction(() => document.querySelector('video')?.paused, null, { timeout: 5000 });
+await page.waitForFunction(() => window.ADT_MEDIA_SYNC?.video?.()?.paused, null, { timeout: 5000 });
 const syncPaused = await page.evaluate(() => ({
   active: window.ADT_MEDIA_SYNC?.active() || false,
-  videoPaused: document.querySelector('video')?.paused,
+  videoPaused: window.ADT_MEDIA_SYNC?.video?.()?.paused,
 }));
 assert(syncPlaying.active && syncPlaying.videoPaused === false && syncPlaying.videoTime > 0,
   `Detached runtime audio did not start the page video: ${JSON.stringify(syncPlaying)}`);

@@ -5,14 +5,22 @@
   let pauseTimer = 0;
   const nativePlay = HTMLMediaElement.prototype.play;
   const nativePause = HTMLMediaElement.prototype.pause;
-  const pageVideo = () => document.querySelector('#interface-container video, video');
+  const pageVideo = () => {
+    const shadowHost = document.querySelector('[data-sign-language-host="true"]');
+    return shadowHost?.shadowRoot?.querySelector('video')
+      || document.querySelector('#interface-container video, video');
+  };
   const playVideo = () => {
     const video = pageVideo();
     if (video && video.paused) video.play().catch(() => {});
   };
   const pauseVideo = () => {
     const video = pageVideo();
-    if (video && !video.paused) video.pause();
+    if (video && !video.paused) {
+      video.dataset.adtNarrationSyncPause = 'true';
+      video.pause();
+      delete video.dataset.adtNarrationSyncPause;
+    }
   };
 
   const onAudioPlay = (audio) => {

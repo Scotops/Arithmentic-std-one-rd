@@ -70,6 +70,9 @@
   };
 
   mediaPrototype.pause = function () {
+    if (this.dataset && this.dataset.adtNarrationSyncPause === "true") {
+      return nativePause.apply(this, arguments);
+    }
     if (
       isSignLanguageVideo(this) &&
       now() < narrationActivationUntil &&
