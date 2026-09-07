@@ -40,15 +40,6 @@
     'pg085_im012_seg001_v1_crop_v1', 'pg085_im012_seg002_v1_crop_v1',
     'pg085_im012_seg003_v1_crop_v1', 'pg085_im012_seg004_v1_crop_v1',
     'pg085_im012_seg005_v1_crop_v1', 'pg085_im012_seg006_v1_crop_v1',
-    'pg126_im008_seg001_v1_crop1', 'pg126_im008_seg002_v1_crop1',
-    'pg126_im008_seg003_v1_crop1', 'pg126_im008_seg004_v1_crop1',
-    'pg126_im008_seg005_v1_crop1', 'pg126_im008_seg006_v1_crop1',
-    'pg126_im008_seg007_v1_crop_v1_crop1', 'pg126_im008_seg008_v1_crop1',
-    'pg129_im013', 'pg129_im014', 'pg129_im018_seg003_v1_crop_v1',
-    'pg129_im003', 'pg129_im018_seg005_v1_crop1',
-    'pg129_im018_seg006_v1_crop_v1_crop1', 'pg129_im018_seg007_v1_crop_v1_crop1',
-    'pg129_im018_seg008_v1_crop_v1_crop1', 'pg129_im018_seg009_v1_crop1',
-    'pg129_im018_seg010_v1_crop_v1_crop1'
   ]);
   const matrixMathIds = new Set([
     'pg002_n0005', 'pg049_n0009', 'pg049_n0019', 'pg049_n0029', 'pg049_n0039',

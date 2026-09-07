@@ -76,22 +76,11 @@
   const extract = (root) => Array.from(root.querySelectorAll('[data-id]'))
     .filter((element) => !excluded(element));
 
-  const deduplicate = (elements) => {
-    const first = new Map();
-    return elements.filter((element) => {
-      const id = element.getAttribute('data-id');
-      if (!id) return false;
-      const prior = first.get(id);
-      if (!prior) {
-        first.set(id, element);
-        return true;
-      }
-      // Image descriptions may be supplied both on the visual image and an
-      // adjacent sr-only caption.  They always represent one reading target.
-      if (id.includes('_im') || element.classList.contains('sr-only') || prior.classList.contains('sr-only')) return false;
-      return false;
-    });
-  };
+  // Preserve every visible DOM occurrence. Repeated objects are meaningful
+  // in a counting book even when they share one localized ID and audio clip.
+  // image-caption-narration.js removes the ID from each visual image before
+  // adding its one caption, so a visual/caption pair cannot be double-read.
+  const deduplicate = (elements) => elements.filter((element) => element.getAttribute('data-id'));
 
   const summarizeMatrix = (container) => {
     const values = Array.from(container.querySelectorAll('img[alt], [data-tts-image-label]'))

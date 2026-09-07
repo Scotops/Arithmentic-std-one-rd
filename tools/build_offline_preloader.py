@@ -88,10 +88,19 @@ def update_html(version: str) -> int:
 
     for path in sorted(ROOT.glob("*.html")):
         original = path.read_text(encoding="utf-8")
-        updated = original
+        updated = re.sub(
+            r"\s*<script\b[^>]*src=[\"'][^\"']*(?:pdf-facsimile|static-textbook)\.js[^\"']*[\"'][^>]*>\s*</script>",
+            "",
+            original,
+            flags=re.IGNORECASE,
+        )
         for pattern in patterns:
             asset = pattern.pattern.split(r"\.", 1)[0]
             updated = pattern.sub(f"{asset}.js?v={version}", updated)
+        updated = re.sub(r"reference-layout\.css\?v=[^\"']+", f"reference-layout.css?v={version}", updated)
+        updated = re.sub(r"tts-pipeline\.js\?v=[^\"']+", f"tts-pipeline.js?v={version}", updated)
+        updated = re.sub(r"media-sync\.js\?v=[^\"']+", f"media-sync.js?v={version}", updated)
+        updated = re.sub(r"accessible-reading-order\.js\?v=[^\"']+", f"accessible-reading-order.js?v={version}", updated)
         updated = image_tag.sub(sync_alt, updated)
         if updated != original:
             path.write_text(updated, encoding="utf-8", newline="")

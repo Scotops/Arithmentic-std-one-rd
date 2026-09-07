@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "locale": "en-US",
+  "subject": "early-learning",
+  "formula_style": "teaching",
+  "voice": {
+    "model": "Microsoft neural TTS with private on-device contextual corrections",
+    "name": "en-US-GuyNeural; Microsoft David Desktop for deficient symbol clips",
+    "format": "mp3 and PCM wav",
+    "instructions": "Use one calm, clear educational voice. Read every approved target in page order. Name arithmetic operators and blank answer spaces, spell abbreviations, pause between countable objects, and never narrate hidden answer keys."
+  },
+  "pronunciations": {
+    "TIE": "T I E",
+    "ICT": "I C T",
+    "UDSM": "U D S M",
+    "UDOM": "U D O M",
+    "SQA": "S Q A",
+    "OK": "O K",
+    "ISBN": "I S B N",
+    "MARUCo": "Maruco"
+  },
+  "spoken_overrides": {
+    "pg002_n0005": "I S B N: nine seven eight, nine nine eight seven, zero nine, nine three three, seven.",
+    "pg002_n0013": "Phone: plus two five five, seven three five, zero four one one six eight; or plus two five five, seven three five, zero four one one seven zero.",
+    "pg002_n0014": "Email: director dot general at T I E dot go dot T Z.",
+    "pg002_n0015": "Website: double u, double u, double u, dot T I E dot go dot T Z.",
+    "pg006_n0009": "Additional learning resources are available at the T I E e-Library: H T T P S, colon, slash slash, O L dot T I E dot go dot T Z; or O L dot T I E dot go dot T Z."
+  },
+  "image_descriptions": {},
+  "accepted_exceptions": [
+    {
+      "code": "missing-text-mapping",
+      "scope": "quiz activity container IDs and navigation fragment labels",
+      "reason": "These IDs identify runtime containers; their child question, option, and interface labels are fully mapped. Mapping the container itself would replace its interactive children."
+    },
+    {
+      "code": "possible-answer-leak",
+      "scope": "source-reviewed examples and answer-safe counting or shape descriptions",
+      "reason": "Worked examples intentionally include results. Assessments expose repeated units or observable properties without naming the required answer."
+    },
+    {
+      "code": "small-image-source",
+      "scope": "individual counting sprites and printed symbols",
+      "reason": "The small intrinsic assets are intentional source illustrations rendered at safe dimensions without distortion."
+    },
+    {
+      "code": "html-not-in-manifest",
+      "scope": "supplemental quizzes and superseded split-section compatibility files",
+      "reason": "The physical reading spine contains exactly 132 PDF pages; supplemental activities and compatibility files must not alter printed folio navigation."
+    }
+  ]
+}

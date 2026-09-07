@@ -137,43 +137,64 @@ body > main { width: 100%; }
   .page44-answer-box { width: 2.5rem; height: 1.25rem; }
 }
 #content {
+  position: relative;
   box-sizing: border-box;
   width: min(1090px, calc(100% - 3rem)) !important;
   max-width: 1090px !important;
   min-height: calc(100vh - 9rem);
   margin: 1.25rem auto 6.5rem !important;
   padding: clamp(1.5rem, 3.2vw, 4rem) !important;
+  padding-bottom: max(5.5rem, clamp(1.5rem, 3.2vw, 4rem)) !important;
   background: #fff;
   box-shadow: 0 10px 30px rgba(15, 23, 42, .14);
 }
-/* PDF-facsimile mode: the visual page is the source PDF with only its
-   watermark artifact removed.  Original HTML remains available to the
-   reader and read-aloud engine, but does not compete visually with print. */
-#content:has(.pdf-page-facsimile) {
-  padding: 0 !important;
+.printed-folio {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  transform: translateX(-50%);
+  color: #111827;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1;
+  text-align: center;
+}
+.printed-folio-cover {
+  position: absolute;
+  height: 0;
+  margin: 0;
   overflow: hidden;
 }
-.pdf-page-facsimile {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: #fff;
+.printed-folio-body {
+  min-width: 4.25rem;
+  min-height: 4.25rem;
+  padding: .35rem .65rem;
+  border-radius: 1.35rem;
+  background: #0ea5a8;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
-.pdf-facsimile-accessible-source {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  /* Source sections may carry Tailwind's min-h-screen.  Although they are
-     visually clipped, that minimum height still enlarges the document and
-     creates a full blank screen after the printed page. */
-  min-height: 0 !important;
-  max-height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
+.ai-narration-disclosure {
+  box-sizing: border-box;
+  max-width: 1090px;
+  margin: .45rem auto 6.75rem;
+  padding: .35rem 1rem;
+  color: #475569;
+  font-size: .78rem;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  #content section[data-section-id^="pg043"] table {
+    min-width: 100% !important;
+  }
 }
 @media (max-width: 640px) {
   #content {
@@ -181,7 +202,19 @@ body > main { width: 100%; }
     min-height: calc(100vh - 5.5rem);
     margin: 0 0 5.5rem !important;
     padding: 1rem !important;
+    padding-bottom: 4.75rem !important;
     box-shadow: none;
+  }
+  .printed-folio-body {
+    min-width: 3.5rem;
+    min-height: 3.5rem;
+    border-radius: 1.1rem;
+    font-size: 1rem;
+  }
+  .ai-narration-disclosure {
+    margin: .25rem auto 5.5rem;
+    padding: .25rem .75rem;
+    font-size: .72rem;
   }
 }
 /* Printed, non-interactive answer boxes restored from the source PDF.
