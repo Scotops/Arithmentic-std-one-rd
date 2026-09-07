@@ -125,23 +125,27 @@ await quizOption.click({ force: true });
 assert(await quizOption.isChecked(), 'Quiz pointer selection failed');
 assert(await page.locator('section[data-section-type="activity_quiz"]').count() === 1, 'Quiz activity structure is missing');
 
-const syncResult = await page.evaluate(async () => {
-  const video = document.querySelector('video') || document.body.appendChild(document.createElement('video'));
-  video.pause();
-  window.__syncPlay = 0;
-  window.__syncPause = 0;
-  let paused = true;
-  Object.defineProperty(video, 'paused', { configurable: true, get: () => paused });
-  video.play = () => { paused = false; window.__syncPlay += 1; return Promise.resolve(); };
-  video.pause = () => { paused = true; window.__syncPause += 1; };
-  const audio = document.body.appendChild(document.createElement('audio'));
-  audio.dispatchEvent(new Event('play'));
-  await new Promise((resolve) => setTimeout(resolve, 320));
-  audio.dispatchEvent(new Event('pause'));
-  await new Promise((resolve) => setTimeout(resolve, 120));
-  return { play: window.__syncPlay, pause: window.__syncPause };
-});
-assert(syncResult.play > 0 && syncResult.pause > 0, `Audio/video synchronization failed: ${JSON.stringify(syncResult)}`);
+await page.waitForSelector('button[aria-label$="text to speech"]');
+await page.locator('button[aria-label$="text to speech"]').click();
+await page.waitForFunction(() => {
+  const video = document.querySelector('video');
+  return window.ADT_MEDIA_SYNC?.active() && video && !video.paused && video.currentTime > 0;
+}, null, { timeout: 10000 });
+const syncPlaying = await page.evaluate(() => ({
+  active: window.ADT_MEDIA_SYNC?.active() || false,
+  videoPaused: document.querySelector('video')?.paused,
+  videoTime: document.querySelector('video')?.currentTime || 0,
+}));
+await page.evaluate(() => window.ADT_MEDIA_SYNC.audio()?.pause());
+await page.waitForFunction(() => document.querySelector('video')?.paused, null, { timeout: 5000 });
+const syncPaused = await page.evaluate(() => ({
+  active: window.ADT_MEDIA_SYNC?.active() || false,
+  videoPaused: document.querySelector('video')?.paused,
+}));
+assert(syncPlaying.active && syncPlaying.videoPaused === false && syncPlaying.videoTime > 0,
+  `Detached runtime audio did not start the page video: ${JSON.stringify(syncPlaying)}`);
+assert(syncPaused.active === false && syncPaused.videoPaused === true,
+  `Pausing runtime narration did not pause the page video: ${JSON.stringify(syncPaused)}`);
 assert(pageErrors.length === 0, `Browser errors: ${pageErrors.join(' | ')}`);
 
 const summary = { physicalPages: pages.length, queueTargets, imageOccurrences, videos: Object.keys(videos).length, keyboardExercise: 'passed', pointerQuiz: 'passed', mediaSync: 'passed', pageErrors: 0 };
