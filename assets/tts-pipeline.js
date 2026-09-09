@@ -33,6 +33,10 @@
   const normalize = (value) => {
     let text = String(value || '')
       .replace(/<span[^>]*adt-blank-line[^>]*><\/span>/gi, ' dash ')
+      // Earlier pages use a plain aria-hidden span with only a bottom border
+      // to draw an answer line. It carries the same learning meaning as the
+      // later `adt-blank-line` component and must be spoken as “dash”.
+      .replace(/<span(?=[^>]*aria-hidden=["']true["'])(?=[^>]*border-bottom)[^>]*>.*?<\/span>/gi, ' dash ')
       .replace(/<[^>]+>/g, ' ')
       .replace(/&nbsp;/gi, ' ')
       .replace(/(?:\[\s*\]|_{2,})/g, ' dash ')

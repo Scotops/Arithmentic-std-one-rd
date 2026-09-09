@@ -11,7 +11,15 @@
 
   const textFixes = {
     pg043_n0035: 'dash',
-    pg043_n0060: 'dash'
+    pg043_n0060: 'dash',
+    pg014_matrix_row_1: 'Seven oranges. Number one.',
+    pg014_matrix_row_2: 'Four oranges. Number eight.',
+    pg014_matrix_row_3: 'Two oranges. Number two.',
+    pg014_matrix_row_4: 'Six oranges. Number seven.',
+    pg014_matrix_row_5: 'Five oranges. Number four.',
+    pg014_matrix_row_6: 'Three oranges. Number six.',
+    pg014_matrix_row_7: 'Nine oranges. Number nine.',
+    pg014_matrix_row_8: 'Eight oranges. Number five.'
   };
 
   // Correct malformed subtraction glyphs in the localized source before it
@@ -50,6 +58,49 @@
     'pg055_n0056', 'pg055_n0061', 'pg055_n0065', 'pg055_n0070', 'pg055_n0074',
     'pg055_n0079', 'pg055_n0083'
   ]);
+  // These chapter-banner images only repeat a title that immediately follows
+  // as real page text. Keep the visible banner, but do not make a child hear
+  // the title twice before the lesson begins.
+  const repeatedChapterBannerIds = new Set([
+    'pg016_im018',
+    // The cover-style Revision Test banner repeats the two text headings
+    // immediately below it.  Keep its visual treatment without reading the
+    // test title a second time.
+    'pg130_im018'
+  ]);
+  const guidedMatrixRows = {
+    pg014_sec001: [
+      'Seven oranges. Number one.',
+      'Four oranges. Number eight.',
+      'Two oranges. Number two.',
+      'Six oranges. Number seven.',
+      'Five oranges. Number four.',
+      'Three oranges. Number six.',
+      'Nine oranges. Number nine.',
+      'Eight oranges. Number five.'
+    ]
+  };
+
+  // A print matching grid can contain many repeated image sprites. Build one
+  // audio-only row target for it, in visual left-to-right order, so it says
+  // the number of objects then the numeral displayed in the right column.
+  const registerGuidedMatrixRows = (root) => {
+    const section = root?.querySelector('[data-section-id]');
+    const rows = guidedMatrixRows[section?.getAttribute('data-section-id')];
+    if (!rows) return;
+    const grid = section.querySelector('.overflow-hidden.rounded-\\[28px\\]');
+    const printedRows = grid ? Array.from(grid.children).slice(1) : [];
+    printedRows.slice(0, rows.length).forEach((row, index) => {
+      const target = document.createElement('span');
+      target.className = 'sr-only adt-guided-matrix-row';
+      target.setAttribute('data-id', `pg014_matrix_row_${index + 1}`);
+      target.textContent = rows[index];
+      row.prepend(target);
+      row.querySelectorAll('[data-id]').forEach((element) => {
+        if (element !== target) element.removeAttribute('data-id');
+      });
+    });
+  };
   // These source pages include invisible duplicate operation labels. The
   // picture narration already says "add" and "equals", so omit only those
   // hidden duplicates while retaining the heading, picture and number fact.
@@ -73,7 +124,10 @@
       // Screen-reader labels embedded in print tables, hidden answer keys,
       // responsive copies, and duplicate image captions are not independent
       // pieces of book content.
-      if (element.closest('label.sr-only') || guidedExampleComponentIds.has(element.getAttribute('data-id')) || !kept.has(element)) element.removeAttribute('data-id');
+      if (element.closest('label.sr-only')
+        || repeatedChapterBannerIds.has(element.getAttribute('data-id'))
+        || guidedExampleComponentIds.has(element.getAttribute('data-id'))
+        || !kept.has(element)) element.removeAttribute('data-id');
     });
   };
 
@@ -118,6 +172,20 @@
       element.setAttribute('data-id', id);
       textFixes[id] = `${number}.`;
       questionLabelAudioFixes[id] = `question-number-${number}.mp3?v=matrix-question-labels-2`;
+    });
+  };
+
+  // Most pages keep the printed question marker in its own source item.
+  // Register its shared child-friendly clip before the reader fetches the
+  // audio map, rather than letting the voice say an isolated digit.
+  const registerPrintedQuestionLabels = (root) => {
+    if (!root) return;
+    root.querySelectorAll('[data-id]').forEach((element) => {
+      const label = (element.textContent || '').trim().match(/^(\d{1,2})\.$/);
+      if (label) {
+        questionLabelAudioFixes[element.getAttribute('data-id')] =
+          `question-number-${Number(label[1])}.mp3?v=matrix-question-labels-2`;
+      }
     });
   };
 
@@ -304,7 +372,9 @@
   // with their accessible captions, otherwise the queue can retain an old
   // generic image label instead of the complete child-friendly description.
   const initializeReadingQueue = () => {
+    registerGuidedMatrixRows(document.getElementById('content'));
     registerStandaloneQuestionLabels(document.getElementById('content'));
+    registerPrintedQuestionLabels(document.getElementById('content'));
     keepOnlyTheVisibleCopy();
     rebuildNarrationQueue();
   };
@@ -312,6 +382,7 @@
   // labels and intercept the localized maps immediately, so the runtime sees
   // their text and "Question number …" audio on its first load.
   registerStandaloneQuestionLabels(document.getElementById('content'));
+  registerPrintedQuestionLabels(document.getElementById('content'));
   patchLocalizedFetches();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeReadingQueue, { once: true });
