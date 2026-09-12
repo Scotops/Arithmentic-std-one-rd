@@ -1,4 +1,4 @@
-"""Project-specific release gate for the 132-page Arithmetic Standard One ADT."""
+"""Project-specific release gate for the 134-page Arithmetic Standard One ADT."""
 
 from __future__ import annotations
 
@@ -39,11 +39,11 @@ def main() -> None:
         fail(f"Unexpected static-audit issues: {unexpected[:5]}")
 
     pages = json.loads((ROOT / "content" / "pages.json").read_text(encoding="utf-8"))
-    expected_folios = ["Cover", "ii", "iii", "iv", "v", "vi"] + [str(i) for i in range(1, 127)]
-    if len(pages) != 132:
-        fail(f"Expected 132 physical pages, got {len(pages)}")
+    expected_folios = ["Front Cover", "Cover", "ii", "iii", "iv", "v", "vi"] + [str(i) for i in range(1, 127)] + ["Back Cover"]
+    if len(pages) != 134:
+        fail(f"Expected 134 physical pages, got {len(pages)}")
     if [str(page.get("page_number")) for page in pages] != expected_folios:
-        fail("Physical-to-printed page mapping is not Cover, ii-vi, 1-126.")
+        fail("Physical-to-printed page mapping is not Front Cover, Cover, ii-vi, 1-126, Back Cover.")
 
     all_html = "\n".join(path.read_text(encoding="utf-8") for path in ROOT.glob("*.html"))
     forbidden = ["pdf-facsimile.js", "static-textbook.js", "offline-preloader-audio-dash-only.js", "images/pdf-pages/", "_page.png"]
@@ -132,7 +132,7 @@ def main() -> None:
 
     print(json.dumps({
         "physical_pages": len(pages),
-        "printed_folios": "Cover, ii-vi, 1-126",
+        "printed_folios": "Front Cover, Cover, ii-vi, 1-126, Back Cover",
         "text_audio_targets": len(audios),
         "static_exercise_sections": static_exercises,
         "static_answer_spaces": static_answer_spaces,

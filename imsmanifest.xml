@@ -233,8 +233,10 @@
       <file href="pg132_sec001.html"/>
       <file href="pg132_sec002.html"/>
       <file href="pg132_sec003.html"/>
+      <file href="back_cover.html"/>
 
       <file href="assets/base.bundle.local.js" />
+      <file href="assets/cover-pages.css" />
       <file href="assets/config.json" />
       <file href="assets/media-playback-independence.js" />
       <file href="assets/offline-preloader-fixed.js" />

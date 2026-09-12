@@ -46,11 +46,11 @@ def main() -> None:
         (view["file"], view["viewport"]["width"], view["viewport"]["height"])
         for view in report["pages"] if view["file"] in physical
     }
-    if len(rendered_physical) != 264:
-        raise SystemExit(f"Expected 264 physical-page views, got {len(rendered_physical)}")
+    if len(rendered_physical) != 268:
+        raise SystemExit(f"Expected 268 physical-page views, got {len(rendered_physical)}")
     print(json.dumps({
-        "physical_pages": 132,
-        "physical_views": 264,
+        "physical_pages": 134,
+        "physical_views": 268,
         "physical_render_errors": 0,
         "accepted_unlisted_compatibility_media_cancellations": len(accepted),
         "missing_media": 0,

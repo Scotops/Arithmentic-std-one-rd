@@ -108,9 +108,12 @@ for (let index = 0; index < pages.length; index += 1) {
   staticExercises += result.staticExercises;
 }
 
-for (let index = 0; index < pages.length; index += 1) {
-  const filename = videos[`video-${index + 1}`];
-  assert(filename, `Missing video mapping for physical page ${index + 1}`);
+assert(Object.keys(videos).length === 132, `Expected the original 132 video mappings, got ${Object.keys(videos).length}`);
+assert(!videos['video-1'] && !videos['video-134'], 'Cover pages must not consume or shift an interior-page video');
+for (let index = 0; index < 132; index += 1) {
+  const physicalPage = index + 2;
+  const filename = videos[`video-${physicalPage}`];
+  assert(filename === `page_${index + 1}.mp4`, `Video flow changed at book page ${index + 1}: ${filename}`);
   assert(fs.existsSync(path.join(root, 'content/i18n/en-US/video', filename)), `Missing video file: ${filename}`);
 }
 
