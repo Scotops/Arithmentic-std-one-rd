@@ -10,35 +10,20 @@
     <link href="./content/tailwind_output.css" rel="stylesheet">
     <link href="./assets/libs/fontawesome/css/all.min.css" rel="stylesheet">
     <link href="./assets/fonts.css?v=2" rel="stylesheet">
-    <link href="./assets/reference-layout.css?v=15" rel="stylesheet">
+    <link href="./assets/reference-layout.css?v=18" rel="stylesheet">
+    <link href="./assets/static-exercises.css?v=1" rel="stylesheet">
+
 </head>
 
 <body class="min-h-screen flex items-center justify-center">
     <main class="w-full">
       <h1 class="sr-only" id="page-heading">Which number should be added to 8 to make 10?</h1>
-      <style>
-    .activity-option.selected-option {
-        border-color: #1d4ed8;
-        border-width: 4px;
-        background-color: rgba(59, 130, 246, 0.18);
-        box-shadow: 0 14px 0 rgba(29, 78, 216, 0.35);
-        transform: translateY(-3px);
-    }
 
-    .activity-option.selected-option .option-text {
-        color: #1e3a8a;
-        font-weight: 600;
-    }
-</style>
 
 <div id="content" class="container content mx-auto w-full min-h-screen px-8 py-8 flex items-center justify-center opacity-0">
-    <section role="activity"
+    <section role="article"
         id="simple-main"
-        data-section-type="activity_quiz"
-        data-id="qz008"
-        data-area-id="qz008"
-        data-correct-answers='{&quot;qz008_o0&quot;:false,&quot;qz008_o1&quot;:false,&quot;qz008_o2&quot;:true}'
-        data-option-explanations='{&quot;qz008_o0&quot;:&quot;qz008_o0_exp&quot;,&quot;qz008_o1&quot;:&quot;qz008_o1_exp&quot;,&quot;qz008_o2&quot;:&quot;qz008_o2_exp&quot;}'
+        data-section-type="static_exercise"
     >
         <div class="flex w-full flex-col items-center gap-10 px-6 py-10">
             <div class="w-full max-w-3xl rounded-3xl p-10">
@@ -58,20 +43,9 @@
                     aria-labelledby="qz008-question-label"
                 >
 
-                    <label
-                        class="activity-option w-full max-w-xl cursor-pointer rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-green-300 hover:translate-y-[-2px] hover:shadow-[0_8px_0_0_rgba(0,0,0,0.55)]"
-                        data-activity-item="qz008_o0"
-                        data-explanation="âŒ Not quite. 8 + 1 = 9, so it does not make 10." data-explanation-id="qz008_o0_exp"
-                        tabindex="0"
-                    >
-                        <input
-                            type="radio"
-                            name="qz008"
-                            value="qz008_o0"
-                            data-activity-item="qz008_o0"
-                            class="sr-only"
-                            aria-labelledby="qz008_o0-option-label"
-                        />
+                    <div
+                     class="activity-option w-full max-w-xl rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] adt-static-option">
+
                         <span
                             id="qz008_o0-option-label"
                             class="option-text block text-lg md:text-2xl text-gray-900"
@@ -80,27 +54,11 @@
                             1) 1
                         </span>
 
-                        <div class="feedback-container hidden w-full rounded-md border border-transparent bg-transparent px-3 py-2 text-gray-700" aria-live="polite">
-                            <span aria-hidden="true" class="feedback-icon mr-2"></span>
-                            <span class="feedback-text"></span>
-                        </div>
 
-                        <span class="validation-mark hidden"></span>
-                    </label>
-                    <label
-                        class="activity-option w-full max-w-xl cursor-pointer rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-green-300 hover:translate-y-[-2px] hover:shadow-[0_8px_0_0_rgba(0,0,0,0.55)]"
-                        data-activity-item="qz008_o1"
-                        data-explanation="âŒ Good try. 8 + 3 = 11, which is more than 10." data-explanation-id="qz008_o1_exp"
-                        tabindex="0"
-                    >
-                        <input
-                            type="radio"
-                            name="qz008"
-                            value="qz008_o1"
-                            data-activity-item="qz008_o1"
-                            class="sr-only"
-                            aria-labelledby="qz008_o1-option-label"
-                        />
+                    </div>
+                    <div
+                     class="activity-option w-full max-w-xl rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] adt-static-option">
+
                         <span
                             id="qz008_o1-option-label"
                             class="option-text block text-lg md:text-2xl text-gray-900"
@@ -109,27 +67,11 @@
                             2) 3
                         </span>
 
-                        <div class="feedback-container hidden w-full rounded-md border border-transparent bg-transparent px-3 py-2 text-gray-700" aria-live="polite">
-                            <span aria-hidden="true" class="feedback-icon mr-2"></span>
-                            <span class="feedback-text"></span>
-                        </div>
 
-                        <span class="validation-mark hidden"></span>
-                    </label>
-                    <label
-                        class="activity-option w-full max-w-xl cursor-pointer rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-green-300 hover:translate-y-[-2px] hover:shadow-[0_8px_0_0_rgba(0,0,0,0.55)]"
-                        data-activity-item="qz008_o2"
-                        data-explanation="âœ… Correct! 8 + 2 = 10." data-explanation-id="qz008_o2_exp"
-                        tabindex="0"
-                    >
-                        <input
-                            type="radio"
-                            name="qz008"
-                            value="qz008_o2"
-                            data-activity-item="qz008_o2"
-                            class="sr-only"
-                            aria-labelledby="qz008_o2-option-label"
-                        />
+                    </div>
+                    <div
+                     class="activity-option w-full max-w-xl rounded-2xl border-2 border-gray-900 bg-[#FFFAF5] px-8 py-6 text-center text-xl font-medium text-gray-900 shadow-[0_6px_0_0_rgba(0,0,0,0.65)] adt-static-option">
+
                         <span
                             id="qz008_o2-option-label"
                             class="option-text block text-lg md:text-2xl text-gray-900"
@@ -138,17 +80,12 @@
                             3) 2
                         </span>
 
-                        <div class="feedback-container hidden w-full rounded-md border border-transparent bg-transparent px-3 py-2 text-gray-700" aria-live="polite">
-                            <span aria-hidden="true" class="feedback-icon mr-2"></span>
-                            <span class="feedback-text"></span>
-                        </div>
 
-                        <span class="validation-mark hidden"></span>
-                    </label>
+                    </div>
                 </div>
 
                 <div class="mt-10 flex flex-col items-center gap-4">
-                    <div data-submit-target class="flex flex-wrap items-center justify-center gap-4"></div>
+
                 </div>
 
             </div>
@@ -156,31 +93,22 @@
     </section>
 </div>
 
-<script type="application/json" id="quiz-correct-answers">
-{"qz008_o0":false,"qz008_o1":false,"qz008_o2":true}
-</script>
-<script type="application/json" id="quiz-explanations">
-{"qz008_o0":"qz008_o0_exp","qz008_o1":"qz008_o1_exp","qz008_o2":"qz008_o2_exp"}
-</script>
 
     </main>
 
-    <script type="text/javascript">
-        window.correctAnswers = JSON.parse('{"qz008_o0":false,"qz008_o1":false,"qz008_o2":true}');
-    </script>
 
     <div class="relative z-50" id="interface-container"></div>
     <div class="relative z-50" id="nav-container"></div>
-    <script src="./assets/offline-preloader-fixed.js?v=15"></script>
+    <script src="./assets/offline-preloader-fixed.js?v=18"></script>
     <script src="./assets/scorm.js"></script>
-    <script src="./assets/image-caption-narration.js?v=15"></script>
+    <script src="./assets/image-caption-narration.js?v=18"></script>
     <script src="./assets/enable-image-descriptions.js?v=1"></script>
     <script src="./assets/base.bundle.local.js"></script>
     <script src="./assets/remove-nonprint-overlays.js?v=2"></script>
     <script src="./assets/matrix-corrections.js?v=no-added-answer-tools-20260821"></script>
     <script src="./assets/remove-dash-display.js?v=1"></script>
 
-    <script src="./assets/media-sync.js?v=17"></script>
+    <script src="./assets/media-sync.js?v=18"></script>
 </body>
 
 </html>

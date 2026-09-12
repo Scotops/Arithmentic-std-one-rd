@@ -1,0 +1,65 @@
+/* Source-book exercises: visible, static, and free of online answer controls. */
+#content section[data-section-type="static_exercise"] {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#content .adt-static-option,
+#content .adt-static-label,
+#content .adt-answer-space,
+#content .adt-answer-space--multiline,
+#content .adt-static-answer-value,
+#content .adt-static-drawing-space {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#content .adt-static-option {
+  cursor: default !important;
+  transform: none !important;
+}
+
+#content .adt-static-option:hover {
+  transform: none !important;
+}
+
+#content .adt-answer-space,
+#content .adt-answer-space--multiline {
+  display: inline-block;
+  min-width: 4.25rem;
+  min-height: 2.5rem;
+  box-sizing: border-box;
+  color: #171717;
+  background: #fff !important;
+}
+
+#content .adt-answer-space--multiline {
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+}
+
+#content .adt-static-answer-value {
+  display: inline-block;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#content .adt-static-drawing-space {
+  display: block;
+  width: 100%;
+  min-height: 12rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+#content td > .adt-answer-space {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}

@@ -84,9 +84,11 @@ def main() -> None:
 
     config = json.loads((ROOT / "assets" / "config.json").read_text(encoding="utf-8"))
     features = config["features"]
-    for feature in ("activities", "readAloud", "describeImages", "signLanguage"):
+    for feature in ("readAloud", "describeImages", "signLanguage"):
         if not features.get(feature):
             fail(f"Required feature is disabled: {feature}")
+    if features.get("activities"):
+        fail("Activities must be disabled because the source exercises are static.")
 
     texts = json.loads((LOCALE / "texts.json").read_text(encoding="utf-8-sig"))
     audios = json.loads((LOCALE / "audios.json").read_text(encoding="utf-8-sig"))
@@ -100,15 +102,20 @@ def main() -> None:
         if not audio_file.is_file() or audio_file.stat().st_size < 500:
             fail(f"Missing or empty audio for {identifier}: {audio_file.name}")
 
-    activity_sections = 0
+    static_exercises = 0
+    static_answer_spaces = 0
     controls = 0
     disabled = 0
     images = 0
     for path in ROOT.glob("*.html"):
         source_html = path.read_text(encoding="utf-8")
-        activity_sections += len(re.findall(r'<section\b[^>]*\brole=["\']activity["\']', source_html, re.I))
-        controls += len(re.findall(r'<(?:input|button|select|textarea)\b|\brole=["\']button["\']', source_html, re.I))
+        static_exercises += len(re.findall(r'\bdata-section-type=["\']static_exercise["\']', source_html, re.I))
+        static_answer_spaces += len(re.findall(r'\badt-(?:answer-space|answer-space--multiline|static-drawing-space)\b', source_html, re.I))
+        controls += len(re.findall(r'<(?:input|button|select|textarea|canvas)\b|\brole=["\'](?:activity|button)["\']', source_html, re.I))
         disabled += len(re.findall(r'\sdisabled(?:\s|=|>)|aria-disabled=["\']true["\']', source_html, re.I))
+        for token in ("data-submit-target", "data-activity-item", "data-correct-answers", "data-option-explanations", "feedback-container"):
+            if token in source_html:
+                fail(f"Generated answering metadata remains in {path.name}: {token}")
         for source in re.findall(r'<img\b[^>]*\bsrc=["\']([^"\']+)["\']', source_html, re.I):
             images += 1
             source = source.split("?", 1)[0]
@@ -116,17 +123,22 @@ def main() -> None:
                 continue
             if not (path.parent / source).resolve().is_file():
                 fail(f"Missing image in {path.name}: {source}")
-    if activity_sections < 20 or controls < 100 or disabled:
-        fail(f"Exercise gate failed: sections={activity_sections}, controls={controls}, disabled={disabled}")
+    if static_exercises < 20 or static_answer_spaces < 100 or controls or disabled:
+        fail(
+            "Static exercise gate failed: "
+            f"sections={static_exercises}, spaces={static_answer_spaces}, "
+            f"controls={controls}, disabled={disabled}"
+        )
 
     print(json.dumps({
         "physical_pages": len(pages),
         "printed_folios": "Cover, ii-vi, 1-126",
         "text_audio_targets": len(audios),
-        "activity_sections": activity_sections,
-        "interactive_controls": controls,
+        "static_exercise_sections": static_exercises,
+        "static_answer_spaces": static_answer_spaces,
+        "interactive_answer_controls": controls,
         "image_occurrences": images,
-        "accepted_structural_container_findings": 21,
+        "accepted_structural_container_findings": 0,
         "unexpected_issues": 0,
     }, indent=2))
 

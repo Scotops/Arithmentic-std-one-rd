@@ -37,8 +37,9 @@ body > main { width: 100%; }
 #content [class*="border-cyan-"], #content [class*="border-teal-"] {
   border-color: #22cddd !important;
 }
-#content [class*="bg-cyan-50"], #content [class*="bg-sky-50"],
-#content [class*="bg-teal-50"] {
+#content [class~="bg-cyan-50"], #content [class*="bg-cyan-50/"],
+#content [class~="bg-sky-50"], #content [class*="bg-sky-50/"],
+#content [class~="bg-teal-50"], #content [class*="bg-teal-50/"] {
   background-color: var(--book-pale-turquoise) !important;
 }
 /* The source book has a narrow turquoise patterned rule at each outer edge

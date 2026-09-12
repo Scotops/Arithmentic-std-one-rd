@@ -1,6 +1,6 @@
 {
   "title": "Arithmetic Pupil’s Book Standard One",
-  "bundleVersion": "16",
+  "bundleVersion": "18",
   "languages": {
     "available": [
       "en-US"
@@ -21,7 +21,7 @@
     "state": true,
     "characterDisplay": false,
     "highlight": false,
-    "activities": true
+    "activities": false
   },
   "analytics": {
     "enabled": false,

@@ -46,25 +46,9 @@ const blockBulkMedia = async (route) => {
 };
 await page.route('**/*', blockBulkMedia);
 
-if (process.argv.includes('--quiz-debug')) {
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('Runtime.enable');
-  cdp.on('Runtime.exceptionThrown', ({ exceptionDetails }) => {
-    console.log(`CDP EXCEPTION ${JSON.stringify(exceptionDetails)}`);
-  });
-  await page.goto(`http://127.0.0.1:${port}/qz001.html`, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(1000);
-  console.log(`After quiz load: ${JSON.stringify(pageErrors)}`);
-  await page.locator('input[type="radio"]').first().click({ force: true });
-  await page.waitForTimeout(1000);
-  console.log(`After quiz selection: ${JSON.stringify(pageErrors)}`);
-  await browser.close();
-  await new Promise((resolve) => server.close(resolve));
-  process.exit(pageErrors.length ? 1 : 0);
-}
-
 let queueTargets = 0;
 let imageOccurrences = 0;
+let staticExercises = 0;
 for (let index = 0; index < pages.length; index += 1) {
   const entry = pages[index];
   const href = entry.href.split('#', 1)[0];
@@ -83,6 +67,20 @@ for (let index = 0; index < pages.length; index += 1) {
     folio: document.querySelector('.printed-folio')?.textContent.trim(),
     imageCount: document.querySelectorAll('#content img').length,
     mediaSync: Boolean(window.ADT_MEDIA_SYNC),
+    staticExercises: document.querySelectorAll('#content section[data-section-type="static_exercise"]').length,
+    answerControls: document.querySelectorAll('#content input, #content textarea, #content select, #content button:not(.matrix-audio-button), #content canvas, #content [role="activity"], #content [data-submit-target], #content [data-activity-item]').length,
+    answerControlDetails: Array.from(document.querySelectorAll('#content input, #content textarea, #content select, #content button:not(.matrix-audio-button), #content canvas, #content [role="activity"], #content [data-submit-target], #content [data-activity-item]')).map((element) => ({
+      tag: element.tagName,
+      id: element.id,
+      role: element.getAttribute('role'),
+      type: element.getAttribute('type'),
+      sectionType: element.getAttribute('data-section-type'),
+      className: element.className,
+    })),
+    fadedExercises: Array.from(document.querySelectorAll('#content section[data-section-type="static_exercise"]')).filter((section) => {
+      const style = getComputedStyle(section);
+      return Number.parseFloat(style.opacity || '1') < 0.99 || (style.filter && style.filter !== 'none');
+    }).length,
   }));
   const expectedFolio = String(entry.page_number);
   assert((result.folio || (index === 0 ? 'Cover' : '')) === expectedFolio, `${href}: folio mismatch`);
@@ -90,6 +88,8 @@ for (let index = 0; index < pages.length; index += 1) {
   assert(result.missingImages.length === 0, `${href}: missing images ${result.missingImages.join(', ')}`);
   assert(result.screenshotLayers === 0, `${href}: full-page screenshot layer found`);
   assert(result.mediaSync, `${href}: media synchronization adapter missing`);
+  assert(result.answerControls === 0, `${href}: generated answer controls remain ${JSON.stringify(result.answerControlDetails)}`);
+  assert(result.fadedExercises === 0, `${href}: exercise content is faded`);
   for (const item of result.queue) {
     assert(item.id && !item.id.includes('_ans_'), `${href}: hidden answer target in queue`);
     if (!item.id.startsWith('adt_question_label_')) {
@@ -105,6 +105,7 @@ for (let index = 0; index < pages.length; index += 1) {
   }
   queueTargets += result.queue.length;
   imageOccurrences += result.imageCount;
+  staticExercises += result.staticExercises;
 }
 
 for (let index = 0; index < pages.length; index += 1) {
@@ -114,27 +115,34 @@ for (let index = 0; index < pages.length; index += 1) {
 }
 
 await page.goto(`http://127.0.0.1:${port}/pg008_sec001.html`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('input[type="radio"]');
-const firstRadio = page.locator('input[type="radio"]').first();
-await firstRadio.focus();
-await page.keyboard.press('Space');
-assert(await firstRadio.isChecked(), 'Keyboard selection failed on page 8');
+await page.waitForSelector('section[data-section-type="static_exercise"]');
+assert(await page.locator('.adt-static-option').count() >= 10, 'Static source options are missing on page 8');
+assert(await page.locator('#content input, #content button:not(.matrix-audio-button), #content textarea, #content select, #content canvas, #content [role="activity"]').count() === 0,
+  'Page 8 still contains answering controls');
 
 await page.goto(`http://127.0.0.1:${port}/pg054_sec001.html`, { waitUntil: 'domcontentloaded' });
-const answer = page.locator('input[type="text"]').first();
-await answer.fill('10');
-assert(await answer.inputValue() === '10', 'Fill-in exercise failed on page 54');
+assert(await page.locator('.adt-answer-space').count() >= 3, 'Printed answer spaces are missing on page 54');
+assert(await page.locator('#content input, #content button:not(.matrix-audio-button), #content textarea, #content select, #content canvas, #content [role="activity"]').count() === 0,
+  'Page 54 still contains answering controls');
+
+await page.goto(`http://127.0.0.1:${port}/pg024_sec001.html`, { waitUntil: 'domcontentloaded' });
+assert(await page.locator('.adt-static-answer-value').filter({ hasText: '6' }).count() === 1,
+  'Source-printed example answer 6 is missing on page 24');
 
 await page.goto(`http://127.0.0.1:${port}/qz001.html`, { waitUntil: 'domcontentloaded' });
-await page.waitForSelector('input[type="radio"]');
-const quizOption = page.locator('input[type="radio"]').first();
-await quizOption.click({ force: true });
-assert(await quizOption.isChecked(), 'Quiz pointer selection failed');
-assert(await page.locator('section[data-section-type="activity_quiz"]').count() === 1, 'Quiz activity structure is missing');
+await page.waitForSelector('section[data-section-type="static_exercise"]');
+assert(await page.locator('.adt-static-option').count() === 3, 'Static quiz options are missing');
+assert(await page.locator('#content input, #content button:not(.matrix-audio-button), #content textarea, #content select, #content canvas, #content [role="activity"], #content [data-submit-target]').count() === 0,
+  'Standalone quiz still contains answering controls');
+
+await page.goto(`http://127.0.0.1:${port}/pg131_sec001.html`, { waitUntil: 'domcontentloaded' });
+assert(await page.locator('.adt-static-drawing-space').count() === 2, 'Printed drawing spaces are missing on page 131');
+assert(await page.locator('#content input, #content button:not(.matrix-audio-button), #content textarea, #content select, #content canvas, #content [role="activity"]').count() === 0,
+  'Page 131 still contains drawing or answer controls');
 
 await page.unroute('**/*', blockBulkMedia);
-await page.reload({ waitUntil: 'domcontentloaded' });
-await page.waitForSelector('video');
+await page.goto(`http://127.0.0.1:${port}/pg024_sec001.html`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('video', { state: 'attached' });
 await page.waitForSelector('button[aria-label$="text to speech"]');
 await page.locator('button[aria-label$="text to speech"]').click();
 await page.waitForFunction(() => {
@@ -164,7 +172,17 @@ assert(syncPaused.active === false && syncPaused.videoPaused === true,
   `Pausing runtime narration did not pause the page video: ${JSON.stringify(syncPaused)}`);
 assert(pageErrors.length === 0, `Browser errors: ${pageErrors.join(' | ')}`);
 
-const summary = { physicalPages: pages.length, queueTargets, imageOccurrences, videos: Object.keys(videos).length, keyboardExercise: 'passed', pointerQuiz: 'passed', mediaSync: 'passed', pageErrors: 0 };
+const summary = {
+  physicalPages: pages.length,
+  queueTargets,
+  imageOccurrences,
+  videos: Object.keys(videos).length,
+  staticExercises,
+  interactiveAnswerControls: 0,
+  staticExercisePresentation: 'passed',
+  mediaSync: 'passed',
+  pageErrors: 0,
+};
 fs.writeFileSync(path.join(root, 'tmp/runtime-test-final.json'), `${JSON.stringify(summary, null, 2)}\n`);
 console.log(JSON.stringify(summary, null, 2));
 
