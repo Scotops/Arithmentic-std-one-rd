@@ -30,6 +30,16 @@
 
   const pipeline = window.ADT_TTS_PIPELINE;
 
+  // Word highlighting is a required reading mode for this book. Reset the
+  // persisted reader preference before the base runtime initializes so an
+  // older sentence-level choice cannot silently disable word-by-word mode.
+  try {
+    window.localStorage.setItem('wordHighlightMode', 'true');
+  } catch (_error) {
+    // Storage can be unavailable in a locked-down or private browser. The
+    // reader runtime still defaults this setting to true in that case.
+  }
+
   const audioFixes = {
     pg043_n0035: 'pg043_n0035.revised.wav?v=audio-audit-20260824',
     pg043_n0060: 'pg043_n0060.revised.wav?v=audio-audit-20260824',
@@ -37,6 +47,73 @@
     pg100_n0075: 'pg100_n0075.revised.wav?v=audio-audit-20260824',
     pg100_n0079: 'pg100_n0079.revised.wav?v=audio-audit-20260824',
     pg100_n0083: 'pg100_n0083.revised.wav?v=audio-audit-20260824'
+  };
+  const DASH_AUDIO = 'adt-dash.blank-dash-guy-20260912.mp3?v=complete-blank-narration-1';
+  const blankStats = {
+    total: 0,
+    owned: 0,
+    standalone: 0,
+    virtualTargets: 0,
+    items: []
+  };
+
+  const isPrintedBlank = (element) => {
+    if (!element || !['span', 'div'].includes(element.tagName.toLowerCase())) return false;
+    const classes = new Set(element.classList);
+    if (classes.has('adt-answer-space')
+      || classes.has('adt-static-drawing-space')
+      || classes.has('adt-blank-line')) return true;
+    if ((element.textContent || '').trim() || element.querySelector('img, svg, math')) return false;
+    // Corner decorations and L-shaped stems beside an answer line are not a
+    // second blank and must not produce an extra “dash”.
+    if (classes.has('pointer-events-none')
+      || Array.from(classes).some((name) => /^border-[lr](?:-|$)/.test(name))) return false;
+    const style = (element.getAttribute('style') || '').toLowerCase();
+    const hasLine = Array.from(classes).some((name) => /^border-b(?:-|$)/.test(name))
+      || style.includes('border-bottom');
+    const looksLikeSpace = Array.from(classes).some((name) => /^(?:w-|min-w-|max-w-|h-|min-h-)/.test(name))
+      || classes.has('flex-1')
+      || classes.has('inline-block')
+      || classes.has('border-dotted')
+      || style.includes('width:');
+    return hasLine && looksLikeSpace;
+  };
+
+  const registerSpokenBlanks = (root) => {
+    if (!root) return;
+    const sectionId = (root.querySelector('[data-section-id]')?.getAttribute('data-section-id')
+      || document.querySelector('meta[name="title-id"]')?.content
+      || 'page').replace(/[^A-Za-z0-9_]+/g, '_');
+    let sequence = 0;
+    root.querySelectorAll('span, div').forEach((element) => {
+      if (!isPrintedBlank(element) || element.dataset.adtBlankRegistered === 'true') return;
+      element.dataset.adtBlankRegistered = 'true';
+      element.dataset.adtBlank = 'true';
+      sequence += 1;
+      blankStats.total += 1;
+      const owner = element.parentElement?.closest('[data-id]') || null;
+      if (owner) {
+        blankStats.owned += 1;
+        blankStats.items.push({ sequence, ownerId: owner.getAttribute('data-id'), virtualId: null });
+        return;
+      }
+
+      const id = `adt_blank_${sectionId}_${String(sequence).padStart(3, '0')}`;
+      const target = document.createElement('span');
+      target.className = 'sr-only adt-spoken-blank';
+      target.setAttribute('data-id', id);
+      // Keep the accessible word in the source reading position without an
+      // absolutely positioned node escaping a horizontally scrollable print
+      // table and increasing the document width on mobile.
+      target.style.cssText = 'position:static;width:0;height:0;margin:0;padding:0;overflow:hidden;display:inline-block;clip-path:inset(50%);white-space:nowrap;border:0;flex:none';
+      target.textContent = 'dash';
+      element.before(target);
+      textFixes[id] = 'dash';
+      audioFixes[id] = DASH_AUDIO;
+      blankStats.standalone += 1;
+      blankStats.virtualTargets += 1;
+      blankStats.items.push({ sequence, ownerId: null, virtualId: id });
+    });
   };
   const questionLabelAudioFixes = {};
   const matrixDescriptionIds = new Set([
@@ -223,17 +300,100 @@
       .flatMap((question) => question.items)];
   };
 
-  const makeNarrationTarget = (element) => {
+  const makeNarrationTarget = (element, sourceKey) => {
     const isImage = element.tagName.toLowerCase() === 'img';
     const target = document.createElement(isImage ? 'img' : 'span');
     target.className = 'adt-reading-target';
     target.setAttribute('data-id', element.getAttribute('data-id'));
+    target.setAttribute('data-adt-source-key', sourceKey);
     if (isImage) {
       target.setAttribute('alt', element.getAttribute('alt') || '');
     } else {
       target.textContent = element.textContent || '';
     }
     return target;
+  };
+
+  const WORD_PATTERN = /[\p{L}\p{N}\p{M}]+(?:[’'-][\p{L}\p{N}\p{M}]+)*/gu;
+
+  const prepareVisibleWordSpans = (source) => {
+    if (!source || source.dataset.adtWordHighlightPrepared === 'true') return;
+    source.dataset.adtWordHighlightPrepared = 'true';
+    if (source.matches('img, svg, input, textarea, select, .sr-only')) return;
+
+    const textNodes = [];
+    const walker = document.createTreeWalker(source, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent || !(node.nodeValue || '').match(WORD_PATTERN)) return NodeFilter.FILTER_REJECT;
+        if (parent.closest('.sr-only, [aria-hidden="true"], .adt-reading-queue')) return NodeFilter.FILTER_REJECT;
+        return parent.closest('[data-adt-reading-source]') === source
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      }
+    });
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    let wordIndex = 0;
+    textNodes.forEach((node) => {
+      const value = node.nodeValue || '';
+      const fragment = document.createDocumentFragment();
+      let cursor = 0;
+      for (const match of value.matchAll(new RegExp(WORD_PATTERN.source, 'gu'))) {
+        const index = match.index || 0;
+        if (index > cursor) fragment.appendChild(document.createTextNode(value.slice(cursor, index)));
+        const word = document.createElement('span');
+        word.setAttribute('data-word-index', String(wordIndex));
+        word.className = 'adt-visible-word';
+        word.textContent = match[0];
+        fragment.appendChild(word);
+        wordIndex += 1;
+        cursor = index + match[0].length;
+      }
+      if (cursor < value.length) fragment.appendChild(document.createTextNode(value.slice(cursor)));
+      node.replaceWith(fragment);
+    });
+    source.dataset.adtVisibleWordCount = String(wordIndex);
+  };
+
+  const installVisibleHighlightBridge = (queue, sourceByKey) => {
+    sourceByKey.forEach((source) => prepareVisibleWordSpans(source));
+
+    const sync = (target) => {
+      if (!target) return;
+      const source = sourceByKey.get(target.getAttribute('data-adt-source-key'));
+      if (!source) return;
+      source.classList.toggle('tts-active-block', target.classList.contains('tts-active-block'));
+      const active = target.querySelector('[data-word-index].bg-yellow-300');
+      const activeIndex = active?.getAttribute('data-word-index') ?? null;
+      source.querySelectorAll('[data-word-index].bg-yellow-300').forEach((word) => {
+        if (word.getAttribute('data-word-index') !== activeIndex) word.classList.remove('bg-yellow-300');
+      });
+      if (activeIndex !== null) {
+        source.querySelector(`[data-word-index="${activeIndex}"]`)?.classList.add('bg-yellow-300');
+      } else {
+        source.querySelectorAll('[data-word-index].bg-yellow-300').forEach((word) => word.classList.remove('bg-yellow-300'));
+      }
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      const changedTargets = new Set();
+      mutations.forEach((mutation) => {
+        const element = mutation.target.nodeType === Node.ELEMENT_NODE
+          ? mutation.target
+          : mutation.target.parentElement;
+        const target = element?.closest?.('[data-adt-source-key]');
+        if (target) changedTargets.add(target);
+      });
+      changedTargets.forEach(sync);
+    });
+    observer.observe(queue, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    queue.querySelectorAll('[data-adt-source-key]').forEach(sync);
   };
 
   // Printed revision tests often use two visual columns. Their source markup
@@ -326,17 +486,39 @@
     pipeline?.cancelPreviousSpeech();
     // Capture IDs before clearing the visual elements.  The visible page
     // becomes presentation-only; the hidden targets carry the audio IDs.
-    const targets = unique.map(makeNarrationTarget);
+    const sourceByKey = new Map();
+    unique.forEach((element, index) => {
+      const sourceKey = String(index + 1);
+      element.setAttribute('data-adt-reading-source', sourceKey);
+      sourceByKey.set(sourceKey, element);
+    });
+    const targets = unique.map((element, index) => makeNarrationTarget(element, String(index + 1)));
     sourceItems.forEach((element) => element.removeAttribute('data-id'));
     const queue = document.createElement('div');
     queue.className = 'adt-reading-queue';
     queue.setAttribute('aria-hidden', 'true');
-    queue.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+    // Strict containment prevents the long, single-line narration playlist
+    // from increasing the document scroll width on narrow pages. The queue
+    // remains addressable by the reader runtime but never affects layout.
+    queue.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;contain:strict;pointer-events:none';
     targets.forEach((target) => queue.appendChild(target));
     root.appendChild(queue);
+    installVisibleHighlightBridge(queue, sourceByKey);
     window.ADT_TTS_DEBUG = Object.freeze({
       queue: () => debugItems.map((item) => ({ ...item })),
-      matrix: (selector) => pipeline?.summarizeMatrix(root.querySelector(selector)) || []
+      matrix: (selector) => pipeline?.summarizeMatrix(root.querySelector(selector)) || [],
+      blanks: () => ({
+        total: blankStats.total,
+        owned: blankStats.owned,
+        standalone: blankStats.standalone,
+        virtualTargets: blankStats.virtualTargets,
+        items: blankStats.items.map((item) => ({ ...item }))
+      }),
+      highlight: () => ({
+        sourceTargets: sourceByKey.size,
+        visibleWords: Array.from(sourceByKey.values())
+          .reduce((total, element) => total + Number(element.dataset.adtVisibleWordCount || 0), 0)
+      })
     });
   };
 
@@ -372,6 +554,7 @@
   // with their accessible captions, otherwise the queue can retain an old
   // generic image label instead of the complete child-friendly description.
   const initializeReadingQueue = () => {
+    registerSpokenBlanks(document.getElementById('content'));
     registerGuidedMatrixRows(document.getElementById('content'));
     registerStandaloneQuestionLabels(document.getElementById('content'));
     registerPrintedQuestionLabels(document.getElementById('content'));
@@ -381,6 +564,7 @@
   // This script is intentionally loaded before the reader runtime. Register
   // labels and intercept the localized maps immediately, so the runtime sees
   // their text and "Question number …" audio on its first load.
+  registerSpokenBlanks(document.getElementById('content'));
   registerStandaloneQuestionLabels(document.getElementById('content'));
   registerPrintedQuestionLabels(document.getElementById('content'));
   patchLocalizedFetches();

@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+from audit_blank_narration import audit as audit_blank_narration
+
 ROOT = Path(__file__).resolve().parents[1]
 AUDIT = ROOT / "tmp" / "adt-quality-final.json" / "adt-audit.json"
 LOCALE = ROOT / "content" / "i18n" / "en-US"
@@ -84,11 +86,21 @@ def main() -> None:
 
     config = json.loads((ROOT / "assets" / "config.json").read_text(encoding="utf-8"))
     features = config["features"]
-    for feature in ("readAloud", "describeImages", "signLanguage"):
+    for feature in ("readAloud", "describeImages", "signLanguage", "highlight"):
         if not features.get(feature):
             fail(f"Required feature is disabled: {feature}")
     if features.get("activities"):
         fail("Activities must be disabled because the source exercises are static.")
+
+    videos = json.loads((LOCALE / "videos.json").read_text(encoding="utf-8-sig"))
+    expected_videos = {"video-1": "page_0.mp4", "video-134": "page_133.mp4"}
+    expected_videos.update({f"video-{physical}": f"page_{physical - 1}.mp4" for physical in range(2, 134)})
+    if videos != expected_videos:
+        fail("Physical-page video mapping changed or is incomplete.")
+    for filename in videos.values():
+        video_file = LOCALE / "video" / filename
+        if not video_file.is_file() or video_file.stat().st_size < 10_000:
+            fail(f"Missing or empty page video: {filename}")
 
     texts = json.loads((LOCALE / "texts.json").read_text(encoding="utf-8-sig"))
     audios = json.loads((LOCALE / "audios.json").read_text(encoding="utf-8-sig"))
@@ -101,6 +113,17 @@ def main() -> None:
         audio_file = LOCALE / "audio" / str(mapping).split("?", 1)[0]
         if not audio_file.is_file() or audio_file.stat().st_size < 500:
             fail(f"Missing or empty audio for {identifier}: {audio_file.name}")
+
+    blank_report = audit_blank_narration(ROOT)
+    if blank_report["owner_targets_needing_audio"]:
+        fail(f"Sentence-owned blanks lack guaranteed dash audio: {blank_report['owner_targets_needing_audio'][:5]}")
+    if blank_report["blank_occurrences"] != 934:
+        fail(f"Expected 934 learner blanks, got {blank_report['blank_occurrences']}")
+    if blank_report["standalone_blank_occurrences"] != 300:
+        fail(f"Expected 300 standalone learner blanks, got {blank_report['standalone_blank_occurrences']}")
+    shared_dash = LOCALE / "audio" / "adt-dash.blank-dash-guy-20260912.mp3"
+    if not shared_dash.is_file() or shared_dash.stat().st_size < 500:
+        fail("The shared standalone dash narration clip is missing or empty.")
 
     static_exercises = 0
     static_answer_spaces = 0
@@ -137,6 +160,10 @@ def main() -> None:
         "static_exercise_sections": static_exercises,
         "static_answer_spaces": static_answer_spaces,
         "interactive_answer_controls": controls,
+        "word_by_word_highlight": True,
+        "blank_occurrences": blank_report["blank_occurrences"],
+        "standalone_blank_targets": blank_report["standalone_blank_occurrences"],
+        "page_videos": len(videos),
         "image_occurrences": images,
         "accepted_structural_container_findings": 0,
         "unexpected_issues": 0,

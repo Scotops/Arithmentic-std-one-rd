@@ -10,6 +10,7 @@ const pages = JSON.parse(fs.readFileSync(path.join(root, 'content/pages.json'), 
 const texts = JSON.parse(fs.readFileSync(path.join(root, 'content/i18n/en-US/texts.json'), 'utf8'));
 const audios = JSON.parse(fs.readFileSync(path.join(root, 'content/i18n/en-US/audios.json'), 'utf8'));
 const videos = JSON.parse(fs.readFileSync(path.join(root, 'content/i18n/en-US/videos.json'), 'utf8'));
+const config = JSON.parse(fs.readFileSync(path.join(root, 'assets/config.json'), 'utf8'));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -49,6 +50,9 @@ await page.route('**/*', blockBulkMedia);
 let queueTargets = 0;
 let imageOccurrences = 0;
 let staticExercises = 0;
+let blankOccurrences = 0;
+let ownedBlankOccurrences = 0;
+let standaloneBlankOccurrences = 0;
 for (let index = 0; index < pages.length; index += 1) {
   const entry = pages[index];
   const href = entry.href.split('#', 1)[0];
@@ -60,7 +64,16 @@ for (let index = 0; index < pages.length; index += 1) {
   } catch (error) {
     throw new Error(`${href}: runtime initialization timeout`, { cause: error });
   }
-  const result = await page.evaluate(() => ({
+  const result = await page.evaluate(async () => {
+    const blankStats = window.ADT_TTS_DEBUG.blanks();
+    const dynamicBlankIds = window.ADT_TTS_DEBUG.queue()
+      .filter((item) => item.id.startsWith('adt_blank_'))
+      .map((item) => item.id);
+    const [localizedTexts, localizedAudios] = await Promise.all([
+      fetch('./content/i18n/en-US/texts.json').then((response) => response.json()),
+      fetch('./content/i18n/en-US/audios.json').then((response) => response.json()),
+    ]);
+    return ({
     queue: window.ADT_TTS_DEBUG.queue(),
     missingImages: Array.from(document.images).filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.src),
     screenshotLayers: document.querySelectorAll('.pdf-page-facsimile, img[src*="pdf-pages"], img[src*="_page.png"]').length,
@@ -81,7 +94,14 @@ for (let index = 0; index < pages.length; index += 1) {
       const style = getComputedStyle(section);
       return Number.parseFloat(style.opacity || '1') < 0.99 || (style.filter && style.filter !== 'none');
     }).length,
-  }));
+    blankStats,
+    visibleBlankCount: document.querySelectorAll('#content [data-adt-blank="true"]').length,
+    dynamicBlankMappingsValid: dynamicBlankIds.every((id) =>
+      localizedTexts[id] === 'dash'
+      && /adt-dash\.blank-dash-guy-20260912\.mp3/.test(localizedAudios[id] || '')),
+    highlightStats: window.ADT_TTS_DEBUG.highlight(),
+    });
+  });
   const expectedFolio = String(entry.page_number);
   assert((result.folio || (index === 0 ? 'Cover' : '')) === expectedFolio, `${href}: folio mismatch`);
   assert(result.queue.length > 0, `${href}: empty narration queue`);
@@ -90,9 +110,18 @@ for (let index = 0; index < pages.length; index += 1) {
   assert(result.mediaSync, `${href}: media synchronization adapter missing`);
   assert(result.answerControls === 0, `${href}: generated answer controls remain ${JSON.stringify(result.answerControlDetails)}`);
   assert(result.fadedExercises === 0, `${href}: exercise content is faded`);
+  assert(result.blankStats.total === result.visibleBlankCount,
+    `${href}: blank inventory mismatch ${JSON.stringify(result.blankStats)}`);
+  assert(result.blankStats.owned + result.blankStats.standalone === result.blankStats.total,
+    `${href}: uncovered blank ${JSON.stringify(result.blankStats)}`);
+  assert(result.blankStats.virtualTargets === result.blankStats.standalone,
+    `${href}: standalone blank is missing a dash target ${JSON.stringify(result.blankStats)}`);
+  assert(result.queue.filter((item) => item.id.startsWith('adt_blank_')).length === result.blankStats.virtualTargets,
+    `${href}: dash targets are duplicated or missing`);
+  assert(result.dynamicBlankMappingsValid, `${href}: dynamic dash text/audio mapping is invalid`);
   for (const item of result.queue) {
     assert(item.id && !item.id.includes('_ans_'), `${href}: hidden answer target in queue`);
-    if (!item.id.startsWith('adt_question_label_')) {
+    if (!item.id.startsWith('adt_question_label_') && !item.id.startsWith('adt_blank_')) {
       assert(item.id in texts, `${href}: queue text is unmapped: ${item.id}`);
       assert(item.id in audios, `${href}: queue audio is unmapped: ${item.id}`);
     }
@@ -106,10 +135,22 @@ for (let index = 0; index < pages.length; index += 1) {
   queueTargets += result.queue.length;
   imageOccurrences += result.imageCount;
   staticExercises += result.staticExercises;
+  blankOccurrences += result.blankStats.total;
+  ownedBlankOccurrences += result.blankStats.owned;
+  standaloneBlankOccurrences += result.blankStats.standalone;
 }
 
-assert(Object.keys(videos).length === 132, `Expected the original 132 video mappings, got ${Object.keys(videos).length}`);
-assert(!videos['video-1'] && !videos['video-134'], 'Cover pages must not consume or shift an interior-page video');
+assert(config.features.highlight === true, 'Word highlighting is not enabled in book configuration');
+assert(blankOccurrences === 934, `Expected 934 learner blanks, got ${blankOccurrences}`);
+assert(ownedBlankOccurrences === 634, `Expected 634 sentence-owned blanks, got ${ownedBlankOccurrences}`);
+assert(standaloneBlankOccurrences === 300, `Expected 300 standalone blanks, got ${standaloneBlankOccurrences}`);
+
+assert(Object.keys(videos).length === 134, `Expected all 134 page video mappings, got ${Object.keys(videos).length}`);
+assert(videos['video-1'] === 'page_0.mp4', `Incorrect front-cover video: ${videos['video-1']}`);
+assert(videos['video-134'] === 'page_133.mp4', `Incorrect back-cover video: ${videos['video-134']}`);
+for (const filename of [videos['video-1'], videos['video-134']]) {
+  assert(fs.existsSync(path.join(root, 'content/i18n/en-US/video', filename)), `Missing cover video file: ${filename}`);
+}
 for (let index = 0; index < 132; index += 1) {
   const physicalPage = index + 2;
   const filename = videos[`video-${physicalPage}`];
@@ -144,10 +185,70 @@ assert(await page.locator('#content input, #content button:not(.matrix-audio-but
   'Page 131 still contains drawing or answer controls');
 
 await page.unroute('**/*', blockBulkMedia);
+for (const [href, filename] of [['index.html', 'page_0.mp4'], ['back_cover.html', 'page_133.mp4']]) {
+  await page.goto(`http://127.0.0.1:${port}/${href}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('video', { state: 'attached' });
+  await page.waitForFunction(() => {
+    const video = window.ADT_MEDIA_SYNC?.video?.();
+    return video && video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 1;
+  }, null, { timeout: 10000 });
+  const coverVideo = await page.evaluate(() => {
+    const video = window.ADT_MEDIA_SYNC.video();
+    const rect = video.getBoundingClientRect();
+    const style = getComputedStyle(video);
+    return {
+      source: video.currentSrc || video.src,
+      duration: video.duration,
+      muted: video.muted,
+      visible: style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 100 && rect.height > 100,
+    };
+  });
+  assert(coverVideo.source.endsWith(`/content/i18n/en-US/video/${filename}`),
+    `Wrong video loaded on ${href}: ${JSON.stringify(coverVideo)}`);
+  assert(coverVideo.muted, `Cover video must not compete with narration audio on ${href}`);
+  assert(coverVideo.visible, `Cover video is not visibly rendered on ${href}: ${JSON.stringify(coverVideo)}`);
+  await page.waitForSelector('button[aria-label$="text to speech"]');
+  await page.locator('button[aria-label$="text to speech"]').click();
+  await page.waitForFunction(() => {
+    const video = window.ADT_MEDIA_SYNC?.video?.();
+    return window.ADT_MEDIA_SYNC?.active() && video && !video.paused && video.currentTime > 0;
+  }, null, { timeout: 10000 });
+  await page.evaluate(() => window.ADT_MEDIA_SYNC.audio()?.pause());
+  await page.waitForFunction(() => {
+    const video = window.ADT_MEDIA_SYNC?.video?.();
+    return !window.ADT_MEDIA_SYNC?.active() && video?.paused;
+  }, null, { timeout: 5000 });
+}
 await page.goto(`http://127.0.0.1:${port}/pg024_sec001.html`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('video', { state: 'attached' });
 await page.waitForSelector('button[aria-label$="text to speech"]');
+const preparedHighlight = await page.evaluate(() => ({
+  mode: window.localStorage.getItem('wordHighlightMode'),
+  visibleWords: window.ADT_TTS_DEBUG.highlight().visibleWords,
+}));
+assert(preparedHighlight.mode === 'true', `Word highlight preference is not enabled: ${JSON.stringify(preparedHighlight)}`);
+assert(preparedHighlight.visibleWords > 0, `Visible words were not prepared: ${JSON.stringify(preparedHighlight)}`);
+await page.evaluate(() => {
+  window.__adtVisibleHighlightSequence = [];
+  const record = () => {
+    const active = Array.from(document.querySelectorAll('#content [data-word-index].bg-yellow-300'))
+      .find((element) => !element.closest('.adt-reading-queue'));
+    if (!active) return;
+    const source = active.closest('[data-adt-reading-source]');
+    const key = `${source?.getAttribute('data-adt-reading-source')}:${active.getAttribute('data-word-index')}`;
+    if (window.__adtVisibleHighlightSequence.at(-1) !== key) window.__adtVisibleHighlightSequence.push(key);
+  };
+  new MutationObserver(record).observe(document.getElementById('content'), {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class'],
+  });
+});
 await page.locator('button[aria-label$="text to speech"]').click();
+await page.waitForFunction(() => new Set(window.__adtVisibleHighlightSequence || []).size >= 2, null, { timeout: 10000 });
+const visibleHighlightSequence = await page.evaluate(() => [...window.__adtVisibleHighlightSequence]);
+assert(new Set(visibleHighlightSequence).size >= 2,
+  `Highlight did not advance word by word: ${JSON.stringify(visibleHighlightSequence)}`);
 await page.waitForFunction(() => {
   const video = window.ADT_MEDIA_SYNC?.video?.();
   return window.ADT_MEDIA_SYNC?.active() && video && !video.paused && video.currentTime > 0;
@@ -183,6 +284,10 @@ const summary = {
   staticExercises,
   interactiveAnswerControls: 0,
   staticExercisePresentation: 'passed',
+  wordByWordHighlight: 'passed',
+  blankOccurrences,
+  ownedBlankOccurrences,
+  standaloneBlankOccurrences,
   mediaSync: 'passed',
   pageErrors: 0,
 };
